@@ -1,0 +1,58 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node (optional)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dependencies (if you have a build)
+        if: false
+        run: |
+          npm ci
+          npm run build
+
+      - name: Prepare site directory for Pages
+        run: |
+          # create a clean site folder that will become the site root
+          rm -rf site || true
+          mkdir site
+          # copy the contents of test/ (this contains the desired index.html)
+          cp -r test/* site/ || true
+          # copy assets so paths like models/... and sounds/... work from site root
+          if [ -d models ]; then cp -r models site/models; fi
+          if [ -d sounds ]; then cp -r sounds site/sounds; fi
+          # show result for debugging
+          echo "site/ contains:" && ls -la site || true
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v1
+        with:
+          path: |
+            site
+
+  deploy:
+    needs: build-and-deploy
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: https://$GITHUB_ACTOR.github.io/${{ github.repository }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v1
+
+      - name: Create CNAME file (optional)
+        if: false
+        run: echo "example.com" > CNAME
